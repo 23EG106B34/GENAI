@@ -1,18 +1,13 @@
-const API_BASE = '/api/bills';
+import { API_BASE } from '../config/apiBase.js';
+import { handleResponse } from '../utils/apiClient.js';
 
-async function handleResponse(response) {
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
-  }
-  return data;
-}
+const BILLS_BASE = `${API_BASE}/bills`;
 
 export async function scanBill(file) {
   const formData = new FormData();
   formData.append('bill', file);
 
-  const res = await fetch(`${API_BASE}/scan`, {
+  const res = await fetch(`${BILLS_BASE}/scan`, {
     method: 'POST',
     body: formData,
   });
@@ -20,7 +15,7 @@ export async function scanBill(file) {
 }
 
 export async function applyBillScan(payload) {
-  const res = await fetch(`${API_BASE}/apply`, {
+  const res = await fetch(`${BILLS_BASE}/apply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -29,7 +24,7 @@ export async function applyBillScan(payload) {
 }
 
 export async function completeBillScan(id, amount) {
-  const res = await fetch(`${API_BASE}/${id}/complete`, {
+  const res = await fetch(`${BILLS_BASE}/${id}/complete`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ amount }),
@@ -38,11 +33,11 @@ export async function completeBillScan(id, amount) {
 }
 
 export async function fetchBillScans(limit = 8) {
-  const res = await fetch(`${API_BASE}?limit=${limit}`);
+  const res = await fetch(`${BILLS_BASE}?limit=${limit}`);
   return handleResponse(res);
 }
 
 export async function undoBillScan(id) {
-  const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${BILLS_BASE}/${id}`, { method: 'DELETE' });
   return handleResponse(res);
 }

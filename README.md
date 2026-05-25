@@ -111,7 +111,19 @@ MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/expense-tracker
 
 ### Frontend
 
-No required env vars for local development. The Vite dev server proxies API calls to `http://localhost:5000`.
+| Variable | Description | Local | Vercel |
+|----------|-------------|-------|--------|
+| `VITE_API_BASE_URL` | API prefix | `/api` (default) | `/_/backend/api` |
+
+Local development uses Vite proxy (`/api` → `http://localhost:5000`). Production uses `frontend/.env.production`.
+
+### Vercel deployment
+
+1. Set project **Framework** to **Services** in the [Vercel dashboard](https://vercel.com/docs/services).
+2. Add **backend** environment variables: `MONGODB_URI` (required), optional `OPENAI_API_KEY`.
+3. Redeploy after pushing. Health check: `https://your-app.vercel.app/_/backend/api/health`
+
+Live demo: [genai-mauve.vercel.app](https://genai-mauve.vercel.app)
 
 ## Bill Upload & Auto-Save
 

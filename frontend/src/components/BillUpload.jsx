@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
-import { scanBill, applyBillScan, completeBillScan } from '../api/bills';
-import { createFilePreviewUrl, isSupportedFile } from '../utils/ocrService';
+import { applyBillScan, completeBillScan } from '../api/bills';
+import { createFilePreviewUrl, extractTextFromFile, isSupportedFile } from '../utils/ocrService';
+import { analyzeBillText } from '../utils/billAnalyzer';
 import BillAnalysisResult from './BillAnalysisResult';
 import AppliedBillCard from './AppliedBillCard';
 import DraftBillCard from './DraftBillCard';
@@ -45,6 +46,30 @@ function toAnalysisShape(parsed) {
     isDraft: parsed.isDraft,
     missingFields: parsed.missingFields,
     rawTextPreview: parsed.rawTextPreview,
+  };
+}
+
+function toBillPayloadShape(analysisResult) {
+  const suggested = analysisResult.suggestedTransaction || {};
+
+  return {
+    billCategory: analysisResult.category,
+    billCategoryLabel: analysisResult.categoryLabel,
+    billCategoryIcon: analysisResult.categoryIcon,
+    confidence: analysisResult.confidence,
+    extractedDetails: analysisResult.details,
+    displayEntries: analysisResult.entries,
+    suggestedTransaction: suggested,
+    type: suggested.type || analysisResult.transactionType,
+    category: suggested.category,
+    title: suggested.title,
+    amount: suggested.amount || 0,
+    totalAmount: suggested.amount || 0,
+    date: suggested.date,
+    isDraft: analysisResult.isDraft,
+    missingFields: analysisResult.missingFields,
+    amountSource: analysisResult.details?.amountSource || 'browser OCR',
+    rawTextPreview: analysisResult.rawTextPreview,
   };
 }
 
@@ -124,8 +149,14 @@ export default function BillUpload({ onApplyBill, onCompleteBill, onUndoBill }) 
       if (preview) setPreviewUrl(preview);
 
       try {
-        const scanRes = await scanBill(selectedFile);
-        const parsed = scanRes.data;
+        const ocrText = await extractTextFromFile(selectedFile);
+        if (!ocrText || ocrText.trim().length < 5) {
+          throw new Error(
+            'Could not read text from this file. Try a clearer photo with good lighting.'
+          );
+        }
+
+        const parsed = toBillPayloadShape(analyzeBillText(ocrText));
 
         setApplying(true);
         await saveBill(parsed, selectedFile, preview);
@@ -245,7 +276,7 @@ export default function BillUpload({ onApplyBill, onCompleteBill, onUndoBill }) 
         {scanning ? (
           <div>
             <div className="mx-auto w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-2" />
-            <p className="text-white font-medium">Scanning on server (OCR)...</p>
+            <p className="text-white font-medium">Scanning receipt...</p>
           </div>
         ) : applying ? (
           <p className="text-white font-medium">Saving extracted details...</p>

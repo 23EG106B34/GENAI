@@ -19,6 +19,10 @@ app.use(
 );
 app.use(express.json());
 
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, message: 'Expense Tracker API is running' });
+});
+
 app.use(async (req, res, next) => {
   try {
     await connectDB();
@@ -26,10 +30,6 @@ app.use(async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
-
-app.get('/api/health', (req, res) => {
-  res.json({ success: true, message: 'Expense Tracker API is running' });
 });
 
 app.use('/api/transactions', transactionRoutes);

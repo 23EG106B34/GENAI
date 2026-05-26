@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { scanReceipt } from '../api/receipts';
+import { extractTextFromFile } from '../utils/ocrService';
+import { analyzeBillText } from '../utils/billAnalyzer';
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/bmp';
 
@@ -26,8 +27,28 @@ export default function ReceiptScanDropzone({ onScanComplete, onScanError }) {
     onScanError?.(null);
 
     try {
-      const result = await scanReceipt(file);
-      onScanComplete?.(result.data);
+      const ocrText = await extractTextFromFile(file);
+      if (!ocrText || ocrText.trim().length < 5) {
+        throw new Error(
+          'Could not read text from this image. Try a clearer photo with good lighting.'
+        );
+      }
+
+      const analysis = analyzeBillText(ocrText);
+      const transaction = analysis.suggestedTransaction || {};
+
+      onScanComplete?.({
+        vendorName: transaction.title,
+        totalAmount: transaction.amount || 0,
+        category: transaction.category,
+        date: transaction.date,
+        type: transaction.type,
+        confidence: analysis.confidence,
+        title: transaction.title,
+        amount: transaction.amount || 0,
+        parserUsed: 'browser OCR',
+        rawTextPreview: analysis.rawTextPreview,
+      });
     } catch (err) {
       onScanError?.(err.message);
     } finally {
@@ -76,7 +97,7 @@ export default function ReceiptScanDropzone({ onScanComplete, onScanError }) {
           <div className="flex flex-col items-center gap-3 py-2">
             <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-white font-medium">Scanning receipt...</p>
-            <p className="text-xs text-slate-500">OCR processing on server</p>
+            <p className="text-xs text-slate-500">OCR processing in your browser</p>
           </div>
         ) : (
           <div className="flex items-center justify-center gap-4">
